@@ -20,7 +20,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ActiveUserAdapter.Listener {
 
     // view binding
     private lateinit var binding: ActivityMainBinding
@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity() {
 
     // recycler view setup
     private fun setupRecyclerView() {
-        recyclerAdapter = ActiveUserAdapter()
+        recyclerAdapter = ActiveUserAdapter(this)
         binding.apply {
             mainRecyclerView.apply {
                 adapter = recyclerAdapter
@@ -133,6 +133,32 @@ class MainActivity : AppCompatActivity() {
                         )
                     }.show()
             }
+        }
+    }
+
+    override fun onVideoCallClicked(username: String) {
+        // checking permission for mic & camera
+        if (checkPermission()) {
+            mainRepository.sendConnectionRequest(username,true) {
+                if (it) {
+
+                }
+            }
+        } else {
+            Toast.makeText(this, "Camera & mic permission required!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onAudioCallClicked(username: String) {
+        // checking permission for mic & camera
+        if (checkPermission()) {
+            mainRepository.sendConnectionRequest(username,true) {
+                if (it) {
+
+                }
+            }
+        } else {
+            Toast.makeText(this, "Camera & mic permission required!", Toast.LENGTH_SHORT).show()
         }
     }
 }

@@ -8,7 +8,7 @@ import com.vdcodeassociate.webrtccallingapplication.R
 import com.vdcodeassociate.webrtccallingapplication.databinding.ItemMainRecyclerViewBinding
 import com.vdcodeassociate.webrtccallingapplication.model.User
 
-class ActiveUserAdapter() : RecyclerView.Adapter<ActiveUserAdapter.MainRecyclerViewHolder>() {
+class ActiveUserAdapter(private val listener:Listener) : RecyclerView.Adapter<ActiveUserAdapter.MainRecyclerViewHolder>() {
 
     private var usersList: List<User>? = null
     fun updateList(list: List<User>) {
@@ -31,9 +31,9 @@ class ActiveUserAdapter() : RecyclerView.Adapter<ActiveUserAdapter.MainRecyclerV
         usersList?.let { list ->
             val user = list[position]
             holder.bind(user, {
-//                listener.onVideoCallClicked(it)
+                listener.onVideoCallClicked(it)
             }, {
-//                listener.onAudioCallClicked(it)
+                listener.onAudioCallClicked(it)
             })
         }
     }

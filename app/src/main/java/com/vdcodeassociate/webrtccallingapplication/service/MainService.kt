@@ -12,13 +12,21 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.vdcodeassociate.webrtccallingapplication.R
+import com.vdcodeassociate.webrtccallingapplication.repository.MainRepository
+import com.vdcodeassociate.webrtccallingapplication.utils.DataModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainService : Service() {
+class MainService : Service(), MainRepository.Listener {
+
+    private val TAG = "MainService"
 
     private var isServiceRunning = false
     private var username : String? = null
+
+    @Inject
+    lateinit var mainRepository: MainRepository
 
     private lateinit var notificationManager: NotificationManager
 
@@ -54,7 +62,9 @@ class MainService : Service() {
             isServiceRunning = true
             username = incomingIntent.getStringExtra("username")
             startServiceWithNotification()
-
+            // start service here
+            mainRepository.listener = this
+            mainRepository.initFirebase()
         } else {
             Unit
         }
@@ -76,5 +86,9 @@ class MainService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
+    }
+
+    override fun onLatestEventReceived(event: DataModel) {
+        Log.d(TAG, "onLatestEventReceived : $event")
     }
 }

@@ -1,5 +1,6 @@
 package com.vdcodeassociate.webrtccallingapplication.firebaseClient
 
+import android.util.Log
 import com.vdcodeassociate.webrtccallingapplication.utils.Constants.FIREBASE_LATEST_EVENT
 import com.vdcodeassociate.webrtccallingapplication.utils.Constants.FIREBASE_PASSWORD
 import com.vdcodeassociate.webrtccallingapplication.utils.Constants.FIREBASE_STATUS
@@ -15,6 +16,8 @@ import com.google.gson.Gson
 import com.vdcodeassociate.webrtccallingapplication.model.User
 import com.vdcodeassociate.webrtccallingapplication.model.LatestEvent
 import com.vdcodeassociate.webrtccallingapplication.prefdata.PreferenceImpl
+import com.vdcodeassociate.webrtccallingapplication.utils.DataModel
+import com.vdcodeassociate.webrtccallingapplication.utils.DataModelType
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -145,5 +148,52 @@ class FirebaseClient @Inject constructor(
             override fun onCancelled(error: DatabaseError) {
             }
         })
+    }
+
+    fun subscribeForLatestEvents(listener: Listener) {
+        try {
+            // user data path
+            val userDataPath = "$USERS_FIREBASE/${preferenceImpl.getLoggedUsername()}"
+            dbRef.child(userDataPath).child("$FIREBASE_LATEST_EVENT/$FIREBASE_TYPE").addValueEventListener(
+                object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        Log.d(TAG, snapshot.value.toString())
+                        val event = try {
+                            gson.fromJson(snapshot.value.toString(), DataModel::class.java)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            Log.d(TAG, e.message.toString())
+                            null
+                        }
+                        event?.let {
+                            listener.onLatestEventReceived(event)
+                        }
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {}
+                }
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun sendMessageToOtherClients(message: DataModel, success: (Boolean) -> Unit) {
+        val convertMessage = gson.toJson(message.copy(sender = currentUserName))
+
+        val childData = mapOf(
+            "$FIREBASE_LATEST_EVENT/$FIREBASE_TYPE" to convertMessage
+        )
+
+        dbRef.child(USERS_FIREBASE).child(message.target).updateChildren(childData)
+            .addOnSuccessListener {
+                success(true)
+            }.addOnFailureListener {
+                success(false)
+            }
+    }
+
+    interface Listener {
+        fun onLatestEventReceived(event : DataModel)
     }
 }
