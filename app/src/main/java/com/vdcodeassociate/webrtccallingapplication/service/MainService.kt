@@ -14,6 +14,8 @@ import androidx.core.app.NotificationCompat
 import com.vdcodeassociate.webrtccallingapplication.R
 import com.vdcodeassociate.webrtccallingapplication.repository.MainRepository
 import com.vdcodeassociate.webrtccallingapplication.utils.DataModel
+import com.vdcodeassociate.webrtccallingapplication.utils.DataModelType
+import com.vdcodeassociate.webrtccallingapplication.utils.isValid
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -28,6 +30,8 @@ class MainService : Service(), MainRepository.Listener {
     @Inject
     lateinit var mainRepository: MainRepository
 
+    companion object {var listener: Listener? = null}
+
     private lateinit var notificationManager: NotificationManager
 
     override fun onCreate() {
@@ -38,13 +42,14 @@ class MainService : Service(), MainRepository.Listener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("TAG_PIG_099", "this reached 2!")
-
         intent?.let { incomingIntent ->
             when (incomingIntent.action) {
                 MainServiceActions.START_SERVICE.name -> {
-                    Log.d("TAG_PIG_099", "this reached 3!")
                     handleStartService(incomingIntent)
+                }
+
+                MainServiceActions.SETUP_VIEWS.name -> {
+                    handleSetupViews(incomingIntent)
                 }
 
                 else -> {
@@ -70,6 +75,18 @@ class MainService : Service(), MainRepository.Listener {
         }
     }
 
+    private fun handleSetupViews(incomingIntent: Intent) {
+        val isVideoCall = incomingIntent.getBooleanExtra("isVideoCall", false)
+        val isCaller = incomingIntent.getBooleanExtra("isCaller", false)
+        val target = incomingIntent.getStringExtra("target")
+        mainRepository.setTarget(target)
+        // init our widgets & start streaming audio or video source
+        if (!isCaller) {
+            // start the video call
+            mainRepository.startCall();
+        }
+    }
+
     @SuppressLint("ForegroundServiceType")
     private fun startServiceWithNotification() {
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
@@ -90,5 +107,18 @@ class MainService : Service(), MainRepository.Listener {
 
     override fun onLatestEventReceived(event: DataModel) {
         Log.d(TAG, "onLatestEventReceived : $event")
+
+        if (event.isValid()) {
+            when (event.type) {
+                DataModelType.StartAudioCall, DataModelType.StartVideoCall, -> {
+                    listener?.onCallReceived(event)
+                }
+                else -> Unit
+            }
+        }
+    }
+
+    interface Listener {
+        fun onCallReceived(model: DataModel)
     }
 }

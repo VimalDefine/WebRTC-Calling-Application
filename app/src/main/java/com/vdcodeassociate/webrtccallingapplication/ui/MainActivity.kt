@@ -1,6 +1,7 @@
 package com.vdcodeassociate.webrtccallingapplication.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -10,17 +11,21 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.vdcodeassociate.webrtccallingapplication.R
 import com.vdcodeassociate.webrtccallingapplication.repository.MainRepository
 import com.vdcodeassociate.webrtccallingapplication.adapters.ActiveUserAdapter
 import com.vdcodeassociate.webrtccallingapplication.databinding.ActivityMainBinding
+import com.vdcodeassociate.webrtccallingapplication.service.MainService
 import com.vdcodeassociate.webrtccallingapplication.service.MainServiceRepository
+import com.vdcodeassociate.webrtccallingapplication.utils.DataModel
+import com.vdcodeassociate.webrtccallingapplication.utils.DataModelType
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity(), ActiveUserAdapter.Listener {
+class MainActivity : AppCompatActivity(), ActiveUserAdapter.Listener, MainService.Listener {
 
     // view binding
     private lateinit var binding: ActivityMainBinding
@@ -74,6 +79,7 @@ class MainActivity : AppCompatActivity(), ActiveUserAdapter.Listener {
     }
 
     private fun subscribeObservers() {
+        MainService.listener = this
         mainRepository.observeUserStates {
             Log.d("MAIN_TAG", "Subscribed Observers: $it")
             recyclerAdapter.updateList(it)
@@ -141,7 +147,7 @@ class MainActivity : AppCompatActivity(), ActiveUserAdapter.Listener {
         if (checkPermission()) {
             mainRepository.sendConnectionRequest(username,true) {
                 if (it) {
-
+                    startCallingActivity(username, true)
                 }
             }
         } else {
@@ -152,13 +158,41 @@ class MainActivity : AppCompatActivity(), ActiveUserAdapter.Listener {
     override fun onAudioCallClicked(username: String) {
         // checking permission for mic & camera
         if (checkPermission()) {
-            mainRepository.sendConnectionRequest(username,true) {
+            mainRepository.sendConnectionRequest(username,false) {
                 if (it) {
-
+                    startCallingActivity(username, false)
                 }
             }
         } else {
             Toast.makeText(this, "Camera & mic permission required!", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    override fun onCallReceived(model: DataModel) {
+        runOnUiThread {
+            binding.apply {
+                val isVideoCall = model.type == DataModelType.StartVideoCall
+                val callingText = if (isVideoCall) "Video" else "Audio"
+                incomingCallTitleTv.text = "${model.sender} is $callingText Calling you."
+                incomingCallLayout.isVisible = true
+                acceptButton.setOnClickListener {
+                    incomingCallLayout.isVisible = false
+                    // create an intent to go to video call activity
+                    startCallingActivity(model.target, isVideoCall)
+                }
+                declineButton.setOnClickListener {
+                    incomingCallLayout.isVisible = false
+                    // create an intent to go to video call activity
+                }
+            }
+        }
+    }
+
+    private fun startCallingActivity(target: String, isVideoCall: Boolean) {
+        startActivity(Intent(this, CallActivity::class.java).apply {
+            putExtra("target", target)
+            putExtra("isVideoCall", isVideoCall)
+            putExtra("isCaller", username)
+        })
     }
 }

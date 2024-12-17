@@ -179,7 +179,7 @@ class FirebaseClient @Inject constructor(
     }
 
     fun sendMessageToOtherClients(message: DataModel, success: (Boolean) -> Unit) {
-        val convertMessage = gson.toJson(message.copy(sender = currentUserName))
+        val convertMessage = gson.toJson(message)
 
         val childData = mapOf(
             "$FIREBASE_LATEST_EVENT/$FIREBASE_TYPE" to convertMessage
