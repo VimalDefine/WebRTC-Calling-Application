@@ -22,7 +22,9 @@ import org.webrtc.SurfaceTextureHelper
 import org.webrtc.SurfaceViewRenderer
 import org.webrtc.VideoTrack
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class WebRTCClient @Inject constructor(
     private val context: Context,
     private val gson: Gson
